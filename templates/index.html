@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with Your Data</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .chat-container {
+            background-color: #ffffff;
+            border-radius: 1rem;
+            box-shadow: 0 4px 12px #8a8484;
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative; /* Needed for absolute positioning of loading bar */
+        }
+        .chat-box {
+            flex-grow: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            max-height: 60vh; /* Limit chat box height */
+            display: flex;
+            flex-direction: column;
+        }
+        .message {
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            max-width: 80%;
+        }
+        .user-message {
+            align-self: flex-end;
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            border-bottom-right-radius: 0;
+        }
+        .bot-message {
+            align-self: flex-start;
+            background-color: #e5e7eb; /* gray-200 */
+            color: #374151; /* gray-700 */
+            border-bottom-left-radius: 0;
+        }
+        .input-area {
+            padding: 1.5rem;
+            border-top: 1px solid #e5e7eb; /* gray-200 */
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        .input-area input[type="text"] {
+            flex-grow: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db; /* gray-300 */
+            border-radius: 0.5rem;
+            outline: none;
+            transition: border-color 0.2s ease-in-out;
+        }
+        .input-area input[type="text"]:focus {
+            border-color: #3b82f6; /* blue-500 */
+        }
+        .input-area button {
+            padding: 0.75rem 1.5rem;
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .input-area button:hover {
+            background-color: #2563eb; /* blue-600 */
+        }
+        .file-upload-area {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e5e7eb; /* gray-200 */
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            background-color: #f9fafb; /* gray-50 */
+            border-top-left-radius: 1rem;
+            border-top-right-radius: 1rem;
+        }
+        .file-upload-area input[type="file"] {
+            flex-grow: 1;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db; /* gray-300 */
+            border-radius: 0.5rem;
+            background-color: white;
+        }
+        .file-upload-area button {
+            padding: 0.75rem 1.5rem;
+            background-color: #10b981; /* emerald-500 */
+            color: white;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .file-upload-area button:hover {
+            background-color: #059669; /* emerald-600 */
+        }
+        .plot-image {
+            max-width: 100%;
+            height: auto;
+            margin-top: 0.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        .dataframe-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5rem;
+            overflow-x: auto; /* Add horizontal scroll for large tables */
+            display: block; /* Make table a block element for overflow */
+        }
+        .dataframe-table th, .dataframe-table td {
+            border: 1px solid #d1d5db; /* gray-300 */
+            padding: 0.5rem;
+            text-align: left;
+        }
+        .dataframe-table th {
+            background-color: #f3f4f6; /* gray-100 */
+            font-weight: bold;
+        }
+
+        /* --- Loading Bar Styles --- */
+        .loading-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px; /* Height of the loading bar */
+            background-color: #3b82f6; /* blue-500 */
+            overflow: hidden;
+            display: none; /* Hidden by default */
+        }
+
+        .loading-bar::before {
+            content: '';
+            display: block;
+            position: absolute;
+            left: -200%; /* Start off-screen */
+            width: 200%;
+            height: 100%;
+            background: linear-gradient(to right, transparent 0%, #60a5fa 50%, transparent 100%); /* Gradient effect */
+            animation: loading 1.5s infinite linear; /* Animation */
+        }
+
+        @keyframes loading {
+            0% {
+                left: -200%;
+            }
+            100% {
+                left: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="loading-bar" id="loadingBar"></div>
+
+        <div class="file-upload-area">
+            <input type="file" id="fileInput" accept=".csv,.xls,.xlsx,.json,.txt,.pdf"> <button onclick="uploadFile()">Upload File</button>
+        </div>
+        <div class="chat-box" id="chatBox">
+            <div class="bot-message message">Please upload a data file to start chatting.</div>
+        </div>
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="Ask a question about your data...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const chatBox = document.getElementById('chatBox');
+        const userInput = document.getElementById('userInput');
+        const loadingBar = document.getElementById('loadingBar'); // Get the loading bar element
+
+        function showLoading() {
+            loadingBar.style.display = 'block'; // Show the loading bar
+        }
+
+        function hideLoading() {
+            loadingBar.style.display = 'none'; // Hide the loading bar
+        }
+
+        function addMessage(text, sender, type = 'text', content = null) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', sender === 'user' ? 'user-message' : 'bot-message');
+
+            if (type === 'text') {
+                 messageElement.textContent = text;
+            } else if (type === 'plot' && content) {
+                const textElement = document.createElement('p');
+                textElement.textContent = text; // Display the message like "Generated plot:"
+                messageElement.appendChild(textElement);
+
+                const imgElement = document.createElement('img');
+                imgElement.src = `data:image/png;base64,${content}`;
+                imgElement.classList.add('plot-image');
+                imgElement.alt = 'Generated Plot';
+                messageElement.appendChild(imgElement);
+            } else if (type === 'dataframe' && content) {
+                 const textElement = document.createElement('p');
+                 textElement.textContent = text; // Display the message like "Here is the data:"
+                 messageElement.appendChild(textElement);
+
+                 const tableContainer = document.createElement('div');
+                 tableContainer.innerHTML = content; // Insert the HTML table directly
+                 tableContainer.classList.add('dataframe-table'); // Apply table styling
+                 messageElement.appendChild(tableContainer);
+            }
+
+
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to the latest message
+        }
+
+        function uploadFile() {
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a file first.');
+                return;
+            }
+
+            showLoading(); // Show loading bar before upload
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            addMessage(`Uploading file: ${file.name}...`, 'user');
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading(); // Hide loading bar after response
+                if (data.error) {
+                    addMessage(`Error: ${data.error}`, 'bot');
+                } else {
+                    addMessage(`Successfully loaded "${data.filename}". Data shape: ${data.shape[0]} rows, ${data.shape[1]} columns. You can now ask questions.`, 'bot');
+                    // Optionally display column names:
+                    // addMessage(`Columns: ${data.columns.join(', ')}`, 'bot');
+                }
+            })
+            .catch(error => {
+                hideLoading(); // Hide loading bar on error
+                console.error('Upload error:', error);
+                addMessage('An error occurred during file upload.', 'bot');
+            });
+        }
+
+        function sendMessage() {
+            const query = userInput.value.trim();
+            if (!query) {
+                return;
+            }
+
+            showLoading(); // Show loading bar before sending message
+
+            addMessage(query, 'user');
+            userInput.value = ''; // Clear input field
+
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ query: query })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading(); // Hide loading bar after response
+                if (data.error) {
+                    addMessage(`Error: ${data.error}`, 'bot');
+                } else {
+                    if (data.type === 'plot') {
+                         addMessage(data.content, 'bot', 'plot', data.plot_base64);
+                    } else if (data.type === 'dataframe') {
+                         addMessage("Here is the data:", 'bot', 'dataframe', data.content);
+                    }
+                    else {
+                        addMessage(data.content, 'bot');
+                    }
+                }
+            })
+            .catch(error => {
+                hideLoading(); // Hide loading bar on error
+                console.error('Chat error:', error);
+                addMessage('An error occurred while processing your query.', 'bot');
+            });
+        }
+
+        // Allow sending message by pressing Enter key
+        userInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // Prevent default form submission
+                sendMessage();
+            }
+        });
+
+    </script>
+</body>
+</html>
