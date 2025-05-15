@@ -1,5 +1,3 @@
----
-
 # 📊 Data analysis AI Application
 
 **Data Chat** is a simple yet powerful web application built with **Flask**, **Pandas**, and **PandasAI**. It allows users to upload various types of data files (CSV, Excel, JSON, Text, PDF) and interact with them using natural language. The chatbot can answer questions, analyze data, and even generate plots directly in the web interface.
