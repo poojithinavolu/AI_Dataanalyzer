@@ -30,8 +30,8 @@ Before you begin, make sure you have:
 1. **Clone the repository**:
 
    ```bash
-   git clone https://github.com/YOUR_USERNAME/your-repo-name.git
-   cd your-repo-name
+   git clone https://github.com/poojithinavolu/
+   cd AI_Dataanalyzer
    ```
 
 2. **Create a virtual environment** (recommended):
